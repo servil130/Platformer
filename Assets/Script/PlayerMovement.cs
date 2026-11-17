@@ -1,10 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-/// <summary>
-/// Gerakan player 2D platformer (Unity 6). Tanpa setup tambahan:
-/// ground check, material tanpa friksi, efek debu, dan squash & stretch dibuat otomatis.
-/// </summary>
+
 [RequireComponent(typeof(Rigidbody2D), typeof(Collider2D))]
 public class PlayerMovement : MonoBehaviour
 {
@@ -12,9 +9,9 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float moveSpeed = 7f;
 
     [Header("Akselerasi & Deselerasi (darat)")]
-    [SerializeField] private float groundAcceleration = 55f;   // naik = lebih cepat mencapai moveSpeed
-    [SerializeField] private float groundDeceleration = 45f;   // naik = lebih cepat berhenti (turun = licin)
-    [SerializeField] private float turnAcceleration = 90f;     // saat berbalik arah
+    [SerializeField] private float groundAcceleration = 55f;
+    [SerializeField] private float groundDeceleration = 45f;
+    [SerializeField] private float turnAcceleration = 90f;
 
     [Header("Kontrol di udara")]
     [SerializeField] private float airAcceleration = 35f;
@@ -29,21 +26,26 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float maxFallSpeed = 20f;
 
     [Header("Hang time di puncak lompatan")]
-    [SerializeField] private float apexThreshold = 1.5f;       // |kecepatan Y| di bawah ini dianggap puncak
+    [SerializeField] private float apexThreshold = 1.5f;
     [SerializeField] private float apexGravityMultiplier = 0.6f;
 
     [Header("Ground check (otomatis dari collider)")]
-    [SerializeField] private LayerMask groundLayer;            // kosong (Nothing) = semua layer
+    [SerializeField] private LayerMask groundLayer;
     [SerializeField] private float groundCheckDistance = 0.05f;
 
     [Header("Visual")]
     [SerializeField] private SpriteRenderer sprite;
-    [SerializeField] private Animator animator;                // opsional: parameter Speed (float), Grounded (bool)
+    [SerializeField] private Animator animator;
 
     [Header("Efek debu (dibuat otomatis)")]
     [SerializeField] private bool useDust = true;
     [SerializeField] private Color dustColor = new Color(0.85f, 0.8f, 0.7f, 0.8f);
     [SerializeField] private float dustMinSpeed = 3f;
+
+    [Header("Efek lompat")]
+    [SerializeField] private AudioClip jumpSound;             
+    [SerializeField, Range(0f, 1f)] private float jumpVolume = 0.6f;
+    [SerializeField] private int jumpDustCount = 10;
 
     [Header("Squash & Stretch")]
     [SerializeField] private bool useSquashStretch = true;
@@ -74,6 +76,8 @@ public class PlayerMovement : MonoBehaviour
 
     private ParticleSystem runDust;
     private ParticleSystem landDust;
+    private ParticleSystem jumpDust;
+    private AudioSource audioSource;
 
     void Awake()
     {
@@ -95,6 +99,10 @@ public class PlayerMovement : MonoBehaviour
         groundFilter.SetLayerMask(mask);
         groundFilter.SetNormalAngle(45f, 135f);
 
+        audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.playOnAwake = false;
+        audioSource.spatialBlend = 0f; // 2D
+
         SetupVisual();
         if (useDust) SetupDust();
     }
@@ -103,6 +111,7 @@ public class PlayerMovement : MonoBehaviour
     {
         if (runDust != null) runDust.Play();
         if (landDust != null) landDust.Play();
+        if (jumpDust != null) jumpDust.Play();
     }
 
     // ---------------------------------------------------------------- Update (input & visual)
@@ -185,7 +194,8 @@ public class PlayerMovement : MonoBehaviour
 
         if (useSquashStretch && visual != null)
             visual.localScale = new Vector3(jumpStretch.x, jumpStretch.y, 1f);
-        if (landDust != null) landDust.Emit(6);
+        if (jumpDust != null) jumpDust.Emit(jumpDustCount);
+        if (jumpSound != null) audioSource.PlayOneShot(jumpSound, jumpVolume);
     }
 
     void OnLanded()
@@ -209,9 +219,9 @@ public class PlayerMovement : MonoBehaviour
         {
             if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) x -= 1f;
             if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) x += 1f;
-            pressed |= kb.spaceKey.wasPressedThisFrame || kb.wKey.wasPressedThisFrame || kb.upArrowKey.wasPressedThisFrame;
-            held |= kb.spaceKey.isPressed || kb.wKey.isPressed || kb.upArrowKey.isPressed;
-            released |= kb.spaceKey.wasReleasedThisFrame || kb.wKey.wasReleasedThisFrame || kb.upArrowKey.wasReleasedThisFrame;
+            pressed |= kb.spaceKey.wasPressedThisFrame;
+            held |= kb.spaceKey.isPressed;
+            released |= kb.spaceKey.wasReleasedThisFrame;
         }
 
         var gp = Gamepad.current;
@@ -299,6 +309,8 @@ public class PlayerMovement : MonoBehaviour
         float feetY = col.bounds.min.y - transform.position.y;
         runDust = CreateDust("RunDust", feetY, material, 0.35f, 0.12f, 1.2f, 35f, 18f);
         landDust = CreateDust("LandDust", feetY, material, 0.4f, 0.16f, 2.5f, 70f, 0f);
+        // Sudut 85° = debu menyebar hampir datar ke kiri-kanan dari telapak kaki
+        jumpDust = CreateDust("JumpDust", feetY, material, 0.35f, 0.14f, 2.8f, 85f, 0f);
     }
 
     ParticleSystem CreateDust(string objName, float feetY, Material material,
