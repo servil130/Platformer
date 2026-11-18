@@ -22,6 +22,7 @@ public class Staff : MonoBehaviour
     [SerializeField] private float shootPause = 0.15f;          // lama staff berhenti ikut mouse setelah menembak
     [SerializeField] private float muzzleDistance = 0.5f;       // jarak ujung staff dari pusat staff
     [SerializeField] private float projectileSpeed = 14f;
+    [SerializeField] private int projectileDamage = 1;          // damage per tembakan ke musuh
     [SerializeField] private float projectileLifetime = 2f;
     [SerializeField] private Color projectileColor = new Color(0.45f, 0.85f, 1f, 1f);
     [SerializeField] private AudioClip shootSound;              // mis. tap.wav / power_up.wav
@@ -139,6 +140,7 @@ public class Staff : MonoBehaviour
             ? Instantiate(projectilePrefab, muzzle, Quaternion.identity)
             : Projectile.CreateDefault(projectileColor);
         p.transform.position = muzzle;
+        p.Damage = projectileDamage;
         p.Launch(dir, projectileSpeed, projectileLifetime, transform.root, projectileColor, layerId, order);
 
         // Muzzle flash

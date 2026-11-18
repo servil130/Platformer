@@ -16,6 +16,9 @@ public class Projectile : MonoBehaviour
     private int sortingOrder;
     private bool done;
 
+    /// <summary>Damage ke target yang punya IDamageable (mis. EnemyHealth). Diisi oleh Staff.</summary>
+    public int Damage { get; set; } = 1;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -90,6 +93,9 @@ public class Projectile : MonoBehaviour
         if (other.isTrigger) return;                                  // abaikan trigger lain
         if (owner != null && other.transform.root == owner) return;   // jangan kena diri sendiri
         if (other.GetComponent<Projectile>() != null) return;
+
+        var target = other.GetComponentInParent<IDamageable>();
+        if (target != null) target.TakeDamage(Damage, rb.linearVelocity.normalized);
 
         Impact();
     }
