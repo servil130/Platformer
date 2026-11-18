@@ -68,6 +68,8 @@ public class PlayerMovement : MonoBehaviour
     private float nextTurnDustTime;
     private bool isGrounded;
     private bool wasGrounded;
+    private bool controlEnabled = true;   // dipakai PlayerHealth (mati)
+    private float controlLockTimer;       // dipakai PlayerHealth (knockback)
 
     private SpriteRenderer activeSprite;
     private Transform visual;
@@ -117,7 +119,8 @@ public class PlayerMovement : MonoBehaviour
     // ---------------------------------------------------------------- Update (input & visual)
     void Update()
     {
-        ReadInput();
+        if (controlEnabled) ReadInput();
+        else { moveInput = 0f; jumpHeld = false; }
 
         if (activeSprite != null && moveInput != 0f)
             activeSprite.flipX = moveInput < 0f;
@@ -142,6 +145,7 @@ public class PlayerMovement : MonoBehaviour
         wasGrounded = isGrounded;
 
         float dt = Time.fixedDeltaTime;
+        controlLockTimer -= dt;
         coyoteCounter = isGrounded ? coyoteTime : coyoteCounter - dt;
         bufferCounter -= dt;
 
@@ -168,7 +172,7 @@ public class PlayerMovement : MonoBehaviour
         else
             rate = hasInput ? airAcceleration : airDeceleration;
 
-        float newX = Mathf.MoveTowards(vx, targetSpeed, rate * dt);
+        float newX = controlLockTimer > 0f ? vx : Mathf.MoveTowards(vx, targetSpeed, rate * dt);
 
         // Gravitasi: ringan di puncak (hang time), berat saat jatuh
         float vy = rb.linearVelocity.y;
@@ -178,6 +182,27 @@ public class PlayerMovement : MonoBehaviour
         rb.gravityScale = g;
 
         rb.linearVelocity = new Vector2(newX, Mathf.Max(vy, -maxFallSpeed));
+    }
+
+    // ---------------------------------------------------------------- API untuk PlayerHealth
+    /// <summary>Dorong player dan kunci kontrol horizontal sebentar.</summary>
+    public void ApplyKnockback(Vector2 velocity, float lockTime)
+    {
+        rb.linearVelocity = velocity;
+        controlLockTimer = lockTime;
+        bufferCounter = 0f;
+        jumpCutRequested = false;
+    }
+
+    public void SetControlEnabled(bool enabled)
+    {
+        controlEnabled = enabled;
+        if (!enabled)
+        {
+            moveInput = 0f;
+            jumpHeld = false;
+            bufferCounter = 0f;
+        }
     }
 
     // ---------------------------------------------------------------- Logika
