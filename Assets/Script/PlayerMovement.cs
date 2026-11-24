@@ -33,8 +33,25 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private LayerMask groundLayer;
     [SerializeField] private float groundCheckDistance = 0.05f;
 
+    [Header("Dash")]
+    [SerializeField] private bool dashEnabled = true;
+    [SerializeField] private float dashSpeed = 18f;
+    [SerializeField] private float dashDuration = 0.16f;
+    [SerializeField] private float dashCooldown = 0.45f;       // dihitung sejak dash dimulai
+    [SerializeField] private int airDashes = 1;                // jumlah dash di udara sebelum menyentuh tanah lagi
+    [SerializeField] private float dashBufferTime = 0.1f;
+    [SerializeField] private float dashEndSpeedFactor = 0.5f;  // sisa kecepatan setelah dash (x moveSpeed)
+    [SerializeField] private Vector2 dashStretchScale = new Vector2(1.3f, 0.8f);
+
+    [Header("Dash - bayangan (afterimage)")]
+    [SerializeField] private bool useAfterimage = true;
+    [SerializeField] private float afterimageInterval = 0.03f;
+    [SerializeField] private float afterimageLife = 0.25f;
+    [SerializeField] private Color afterimageColor = new Color(0.5f, 0.8f, 1f, 0.6f);
+
     [Header("Visual")]
     [SerializeField] private SpriteRenderer sprite;
+    [SerializeField] private bool spriteFacesRight = true;     // matikan kalau gambar aslinya menghadap kiri
     [SerializeField] private Animator animator;               // opsional: IsMoving (bool), Grounded (bool), Speed (float), VelocityY (float)
 
     [Header("Efek debu (dibuat otomatis)")]
@@ -70,6 +87,15 @@ public class PlayerMovement : MonoBehaviour
     private bool wasGrounded;
     private bool controlEnabled = true;   // dipakai PlayerHealth (mati)
     private float controlLockTimer;       // dipakai PlayerHealth (knockback)
+
+    private bool isDashing;
+    private float dashTimer;
+    private float dashCooldownTimer;
+    private float dashBuffer;
+    private float nextGhostTime;
+    private int dashDir = 1;
+    private int airDashesLeft;
+    private int facing = 1;               // 1 = kanan, -1 = kiri
 
     private SpriteRenderer activeSprite;
     private Transform visual;
@@ -122,10 +148,17 @@ public class PlayerMovement : MonoBehaviour
     void Update()
     {
         if (controlEnabled) ReadInput();
-        else { moveInput = 0f; jumpHeld = false; }
+        else { moveInput = 0f; jumpHeld = false; dashBuffer = 0f; }
 
-        if (activeSprite != null && moveInput != 0f)
-            activeSprite.flipX = moveInput < 0f;
+        if (moveInput != 0f) facing = moveInput > 0f ? 1 : -1;
+        if (activeSprite != null)
+            activeSprite.flipX = spriteFacesRight ? facing < 0 : facing > 0;
+
+        if (isDashing && useAfterimage && Time.time >= nextGhostTime)
+        {
+            SpawnAfterimage();
+            nextGhostTime = Time.time + afterimageInterval;
+        }
 
         UpdateDust();
         UpdateSquash();
@@ -133,7 +166,8 @@ public class PlayerMovement : MonoBehaviour
         SetAnimFloat("Speed", Mathf.Abs(rb.linearVelocity.x));
         SetAnimFloat("VelocityY", rb.linearVelocity.y);
         SetAnimBool("Grounded", isGrounded);
-        SetAnimBool("IsMoving", isGrounded && Mathf.Abs(rb.linearVelocity.x) > 0.1f);
+        SetAnimBool("IsMoving", isGrounded && !isDashing && Mathf.Abs(rb.linearVelocity.x) > 0.1f);
+        SetAnimBool("IsDashing", isDashing);
     }
 
     // Animator menganimasikan SpriteRenderer asli; salin sprite-nya ke "Visual" supaya animasi tetap terlihat
@@ -167,6 +201,32 @@ public class PlayerMovement : MonoBehaviour
         controlLockTimer -= dt;
         coyoteCounter = isGrounded ? coyoteTime : coyoteCounter - dt;
         bufferCounter -= dt;
+        dashCooldownTimer -= dt;
+        dashBuffer -= dt;
+        if (isGrounded && !isDashing) airDashesLeft = airDashes;
+
+        if (isDashing)
+        {
+            dashTimer -= dt;
+            if (dashTimer <= 0f)
+            {
+                EndDash();
+            }
+            else
+            {
+                rb.gravityScale = 0f;
+                rb.linearVelocity = new Vector2(dashDir * dashSpeed, 0f);
+                return;                                   // selama dash, gerak normal dimatikan
+            }
+        }
+        else if (dashEnabled && dashBuffer > 0f && dashCooldownTimer <= 0f
+                 && controlEnabled && controlLockTimer <= 0f && (isGrounded || airDashesLeft > 0))
+        {
+            StartDash();
+            rb.gravityScale = 0f;
+            rb.linearVelocity = new Vector2(dashDir * dashSpeed, 0f);
+            return;
+        }
 
         if (bufferCounter > 0f && coyoteCounter > 0f)
             Jump();
@@ -203,12 +263,57 @@ public class PlayerMovement : MonoBehaviour
         rb.linearVelocity = new Vector2(newX, Mathf.Max(vy, -maxFallSpeed));
     }
 
+    // ---------------------------------------------------------------- Dash
+    void StartDash()
+    {
+        isDashing = true;
+        dashTimer = dashDuration;
+        dashCooldownTimer = dashCooldown;
+        dashBuffer = 0f;
+        jumpCutRequested = false;
+        nextGhostTime = 0f;
+
+        dashDir = Mathf.Abs(moveInput) > 0.01f ? (moveInput > 0f ? 1 : -1) : facing;
+        facing = dashDir;
+        if (!isGrounded) airDashesLeft--;
+
+        if (visual != null && useSquashStretch)
+            visual.localScale = new Vector3(dashStretchScale.x, dashStretchScale.y, 1f);
+        if (landDust != null && isGrounded) landDust.Emit(8);
+    }
+
+    void EndDash()
+    {
+        isDashing = false;
+        bool holdingSameDir = Mathf.Abs(moveInput) > 0.01f && (moveInput > 0f ? 1 : -1) == dashDir;
+        float endSpeed = holdingSameDir ? moveSpeed : moveSpeed * dashEndSpeedFactor;
+        rb.linearVelocity = new Vector2(dashDir * endSpeed, 0f);
+    }
+
+    // Salinan sprite (frame animasi saat ini) yang memudar, membentuk jejak di belakang player
+    void SpawnAfterimage()
+    {
+        if (activeSprite == null || activeSprite.sprite == null) return;
+        var go = new GameObject("Afterimage");
+        go.transform.SetPositionAndRotation(activeSprite.transform.position, activeSprite.transform.rotation);
+        go.transform.localScale = activeSprite.transform.lossyScale;
+        var sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = activeSprite.sprite;
+        sr.flipX = activeSprite.flipX;
+        sr.flipY = activeSprite.flipY;
+        sr.sortingLayerID = activeSprite.sortingLayerID;
+        sr.sortingOrder = activeSprite.sortingOrder - 1;
+        sr.color = afterimageColor;
+        go.AddComponent<AfterimageFade>().Init(sr, afterimageLife);
+    }
+
     // ---------------------------------------------------------------- API untuk PlayerHealth
     /// <summary>Dorong player dan kunci kontrol horizontal sebentar.</summary>
     public void ApplyKnockback(Vector2 velocity, float lockTime)
     {
         rb.linearVelocity = velocity;
         controlLockTimer = lockTime;
+        isDashing = false;
         bufferCounter = 0f;
         jumpCutRequested = false;
     }
@@ -256,7 +361,7 @@ public class PlayerMovement : MonoBehaviour
     void ReadInput()
     {
         float x = 0f;
-        bool pressed = false, held = false, released = false;
+        bool pressed = false, held = false, released = false, dash = false;
 
         var kb = Keyboard.current;
         if (kb != null)
@@ -266,6 +371,7 @@ public class PlayerMovement : MonoBehaviour
             pressed |= kb.spaceKey.wasPressedThisFrame;
             held |= kb.spaceKey.isPressed;
             released |= kb.spaceKey.wasReleasedThisFrame;
+            dash |= kb.leftShiftKey.wasPressedThisFrame;
         }
 
         var gp = Gamepad.current;
@@ -276,12 +382,14 @@ public class PlayerMovement : MonoBehaviour
             pressed |= gp.buttonSouth.wasPressedThisFrame;
             held |= gp.buttonSouth.isPressed;
             released |= gp.buttonSouth.wasReleasedThisFrame;
+            dash |= gp.buttonEast.wasPressedThisFrame;
         }
 
         moveInput = Mathf.Clamp(x, -1f, 1f);
         jumpHeld = held;
         if (pressed) bufferCounter = jumpBufferTime;
         if (released) jumpCutRequested = true;
+        if (dash) dashBuffer = dashBufferTime;
     }
 
     // ---------------------------------------------------------------- Visual & efek
@@ -416,5 +524,30 @@ public class PlayerMovement : MonoBehaviour
         Vector3 a = new Vector3(c.bounds.min.x, c.bounds.min.y - groundCheckDistance, 0f);
         Vector3 b = new Vector3(c.bounds.max.x, c.bounds.min.y - groundCheckDistance, 0f);
         Gizmos.DrawLine(a, b);
+    }
+}
+
+/// <summary>Sprite jejak dash: memudar lalu hilang sendiri.</summary>
+public class AfterimageFade : MonoBehaviour
+{
+    private SpriteRenderer sr;
+    private Color startColor;
+    private float life, elapsed;
+
+    public void Init(SpriteRenderer renderer, float lifetime)
+    {
+        sr = renderer;
+        startColor = renderer.color;
+        life = Mathf.Max(0.05f, lifetime);
+    }
+
+    void Update()
+    {
+        elapsed += Time.deltaTime;
+        float k = elapsed / life;
+        if (sr == null || k >= 1f) { Destroy(gameObject); return; }
+        Color c = startColor;
+        c.a = startColor.a * (1f - k);
+        sr.color = c;
     }
 }
