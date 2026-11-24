@@ -295,6 +295,7 @@ GameObject:
   - component: {fileID: 253183313}
   - component: {fileID: 253183317}
   - component: {fileID: 253183318}
+  - component: {fileID: 253183319}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -477,11 +478,11 @@ MonoBehaviour:
     m_Bits: 0
   groundCheckDistance: 0.05
   sprite: {fileID: 253183315}
-  animator: {fileID: 0}
+  animator: {fileID: 253183319}
   useDust: 1
   dustColor: {r: 0.85, g: 0.8, b: 0.7, a: 0.8}
   dustMinSpeed: 3
-  jumpSound: {fileID: 0}
+  jumpSound: {fileID: 8300000, guid: ca1cb3f8356148645bfe8e9be1c44be8, type: 3}
   jumpVolume: 0.6
   jumpDustCount: 10
   useSquashStretch: 1
@@ -508,6 +509,28 @@ MonoBehaviour:
   knockbackLockTime: 0.25
   respawnDelay: 1.5
   reloadSceneOnDeath: 0
+--- !u!95 &253183319
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 253183312}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: cd10c81f7c5ce3d48ab8ca8f89f4c390, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &312437464
 GameObject:
   m_ObjectHideFlags: 0
@@ -1227,9 +1250,10 @@ MonoBehaviour:
   shootPause: 0.15
   muzzleDistance: 0.5
   projectileSpeed: 14
+  projectileDamage: 1
   projectileLifetime: 2
   projectileColor: {r: 0.45, g: 0.85, b: 1, a: 1}
-  shootSound: {fileID: 0}
+  shootSound: {fileID: 8300000, guid: 6b327897a0b20f642b7e3242d348a076, type: 3}
   shootVolume: 0.6
   recoilDistance: 0.2
   punchScale: 1.3
@@ -3026,7 +3050,7 @@ GameObject:
   - component: {fileID: 1970058522}
   - component: {fileID: 1970058521}
   - component: {fileID: 1970058526}
-  - component: {fileID: 1970058525}
+  - component: {fileID: 1970058527}
   m_Layer: 0
   m_Name: Slime
   m_TagString: Untagged
@@ -3068,7 +3092,7 @@ BoxCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0.003471136, y: 0.18401474}
+  m_Offset: {x: 0.003471136, y: 0.26620048}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.49245852, y: 0.19285618}
@@ -3078,7 +3102,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 0.8099961, y: 0.3919238}
+  m_Size: {x: 0.8099961, y: 0.5562953}
   m_EdgeRadius: 0
 --- !u!50 &1970058522
 Rigidbody2D:
@@ -3177,40 +3201,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1970058525
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1970058520}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 058372f21e965d44ab3781d0928ee923, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  detectRange: 5
-  loseRange: 14
-  verticalTolerance: 3
-  lookDuration: 0.6
-  chaseSpeed: 3
-  chaseAcceleration: 20
-  stopDistance: 0.4
-  stopAtLedge: 1
-  groundLayer:
-    serializedVersion: 2
-    m_Bits: 24
-  ledgeCheckForward: 0.5
-  ledgeCheckDepth: 1
-  contactDamage: 1
-  awakeParam: Awake
-  walkingParam: IsWalking
-  wakeUpClip: WakeUp
-  sleepDownClip: SleepDown
-  wakeUpDurationFallback: 1
-  sleepDownDurationFallback: 1
-  sprite: {fileID: 1970058523}
-  spriteFacesRight: 1
 --- !u!95 &1970058526
 Animator:
   serializedVersion: 7
@@ -3233,6 +3223,33 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &1970058527
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1970058520}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c086d9c44a768841a19ba3b15d9d9aa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxHealth: 3
+  hitColor: {r: 1, g: 0.35, b: 0.35, a: 1}
+  hitFlashDuration: 0.12
+  knockbackForce: 4
+  knockbackUp: 2
+  deathColor: {r: 0.5, g: 0.9, b: 0.4, a: 1}
+  deathParticles: 16
+  deathShrinkTime: 0.12
+  showHealthBar: 1
+  barWidth: 0.8
+  barHeight: 0.1
+  barVisibleTime: 1.5
+  hitSound: {fileID: 8300000, guid: 28b232ec4cd148b4d837b3581437a124, type: 3}
+  deathSound: {fileID: 8300000, guid: 20ec18710543c7347b34667cf6d611b1, type: 3}
+  soundVolume: 0.7
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
