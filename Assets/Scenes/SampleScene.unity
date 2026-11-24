@@ -3232,7 +3232,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1970058520}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2c086d9c44a768841a19ba3b15d9d9aa, type: 3}
+  m_Script: {fileID: 11500000, guid: 9076a81f793c77e48897b86f27258afe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   maxHealth: 3
@@ -3240,6 +3240,7 @@ MonoBehaviour:
   hitFlashDuration: 0.12
   knockbackForce: 4
   knockbackUp: 2
+  staggerTime: 0.5
   deathColor: {r: 0.5, g: 0.9, b: 0.4, a: 1}
   deathParticles: 16
   deathShrinkTime: 0.12
@@ -3247,9 +3248,37 @@ MonoBehaviour:
   barWidth: 0.8
   barHeight: 0.1
   barVisibleTime: 1.5
+  spriteFacesRight: 1
   hitSound: {fileID: 8300000, guid: 28b232ec4cd148b4d837b3581437a124, type: 3}
   deathSound: {fileID: 8300000, guid: 20ec18710543c7347b34667cf6d611b1, type: 3}
   soundVolume: 0.7
+  animHitParam: IsHit
+  animDeadParam: IsDed
+  hitAnimHold: 0.12
+  contactDamage: 1
+  walkSpeed: 1.5
+  chaseSpeed: 3
+  acceleration: 20
+  avoidEdges: 1
+  edgeCheckDepth: 0.4
+  detectionRange: 5
+  loseRange: 8
+  detectionHeight: 2
+  requireLineOfSight: 1
+  awakeParam: Awake
+  walkingParam: IsWalking
+  startAsleep: 1
+  wakeDuration: 0.8
+  sleepTint: {r: 0.65, g: 0.7, b: 0.85, a: 1}
+  wakeWhenPlayerClose: 0
+  wakeCloseRange: 1.5
+  fallAsleepAgain: 1
+  idleTimeBeforeSleep: 4
+  investigateTime: 3
+  alertPause: 0.6
+  alertHop: 3
+  loseSightTime: 2.5
+  stopDistance: 0.9
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -35,7 +35,7 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Visual")]
     [SerializeField] private SpriteRenderer sprite;
-    [SerializeField] private Animator animator;
+    [SerializeField] private Animator animator;               // opsional: IsMoving (bool), Grounded (bool), Speed (float), VelocityY (float)
 
     [Header("Efek debu (dibuat otomatis)")]
     [SerializeField] private bool useDust = true;
@@ -76,6 +76,7 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 visualBasePos;
     private float spriteBottomLocal;
 
+    private System.Collections.Generic.HashSet<string> animParams;
     private ParticleSystem runDust;
     private ParticleSystem landDust;
     private ParticleSystem jumpDust;
@@ -106,6 +107,7 @@ public class PlayerMovement : MonoBehaviour
         audioSource.spatialBlend = 0f; // 2D
 
         SetupVisual();
+        CacheAnimParams();
         if (useDust) SetupDust();
     }
 
@@ -128,12 +130,29 @@ public class PlayerMovement : MonoBehaviour
         UpdateDust();
         UpdateSquash();
 
-        if (animator != null)
-        {
-            animator.SetFloat("Speed", Mathf.Abs(rb.linearVelocity.x));
-            animator.SetBool("Grounded", isGrounded);
-        }
+        SetAnimFloat("Speed", Mathf.Abs(rb.linearVelocity.x));
+        SetAnimFloat("VelocityY", rb.linearVelocity.y);
+        SetAnimBool("Grounded", isGrounded);
+        SetAnimBool("IsMoving", isGrounded && Mathf.Abs(rb.linearVelocity.x) > 0.1f);
     }
+
+    // Animator menganimasikan SpriteRenderer asli; salin sprite-nya ke "Visual" supaya animasi tetap terlihat
+    void LateUpdate()
+    {
+        if (sprite != null && activeSprite != null && activeSprite != sprite)
+            activeSprite.sprite = sprite.sprite;
+    }
+
+    // Parameter yang tidak ada di controller diabaikan (tanpa warning)
+    void CacheAnimParams()
+    {
+        animParams = new System.Collections.Generic.HashSet<string>();
+        if (animator == null || animator.runtimeAnimatorController == null) return;
+        foreach (var p in animator.parameters) animParams.Add(p.name);
+    }
+
+    void SetAnimFloat(string n, float v) { if (animParams.Contains(n)) animator.SetFloat(n, v); }
+    void SetAnimBool(string n, bool v) { if (animParams.Contains(n)) animator.SetBool(n, v); }
 
     // ---------------------------------------------------------------- FixedUpdate (fisika)
     void FixedUpdate()
