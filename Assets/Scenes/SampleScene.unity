@@ -477,6 +477,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 0
   groundCheckDistance: 0.05
+  safeEdgeMargin: 0.4
   dashEnabled: 1
   dashSpeed: 18
   dashDuration: 0.16
@@ -496,7 +497,7 @@ MonoBehaviour:
   dustColor: {r: 0.85, g: 0.8, b: 0.7, a: 0.8}
   dustMinSpeed: 3
   jumpSound: {fileID: 8300000, guid: ca1cb3f8356148645bfe8e9be1c44be8, type: 3}
-  jumpVolume: 0.6
+  jumpVolume: 1
   jumpDustCount: 10
   useSquashStretch: 1
   jumpStretch: {x: 0.85, y: 1.2}
@@ -520,6 +521,10 @@ MonoBehaviour:
   blinkAlpha: 0.3
   knockback: {x: 6, y: 5}
   knockbackLockTime: 0.25
+  fallDamage: 1
+  fallMargin: 6
+  useManualKillY: 0
+  manualKillY: -15
   respawnDelay: 1.5
   reloadSceneOnDeath: 0
 --- !u!95 &253183319

@@ -33,6 +33,9 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private LayerMask groundLayer;
     [SerializeField] private float groundCheckDistance = 0.05f;
 
+    [Header("Posisi aman (untuk kembali setelah jatuh)")]
+    [SerializeField] private float safeEdgeMargin = 0.4f;      // posisi aman harus sejauh ini dari tepi jurang
+
     [Header("Dash")]
     [SerializeField] private bool dashEnabled = true;
     [SerializeField] private float dashSpeed = 18f;
@@ -97,6 +100,11 @@ public class PlayerMovement : MonoBehaviour
     private int airDashesLeft;
     private int facing = 1;               // 1 = kanan, -1 = kiri
 
+    private float groundedTime;
+    private bool actionLocked;            // dipakai PlayerParry (tidak bisa jalan/lompat/dash)
+    /// <summary>Posisi terakhir yang aman (berdiri mantap di tanah, jauh dari tepi). Dipakai PlayerHealth saat jatuh.</summary>
+    public Vector2 SafePosition { get; private set; }
+
     private SpriteRenderer activeSprite;
     private Transform visual;
     private Vector3 visualBasePos;
@@ -113,6 +121,7 @@ public class PlayerMovement : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         col = GetComponent<Collider2D>();
         defaultGravity = rb.gravityScale;
+        SafePosition = transform.position;
         rb.freezeRotation = true;
         rb.interpolation = RigidbodyInterpolation2D.Interpolate;
         rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
@@ -147,7 +156,7 @@ public class PlayerMovement : MonoBehaviour
     // ---------------------------------------------------------------- Update (input & visual)
     void Update()
     {
-        if (controlEnabled) ReadInput();
+        if (controlEnabled && !actionLocked) ReadInput();
         else { moveInput = 0f; jumpHeld = false; dashBuffer = 0f; }
 
         if (moveInput != 0f) facing = moveInput > 0f ? 1 : -1;
@@ -204,6 +213,11 @@ public class PlayerMovement : MonoBehaviour
         dashCooldownTimer -= dt;
         dashBuffer -= dt;
         if (isGrounded && !isDashing) airDashesLeft = airDashes;
+
+        // Catat posisi aman: sudah berdiri sebentar dan ada tanah di kiri-kanan (bukan di tepi jurang)
+        groundedTime = isGrounded ? groundedTime + dt : 0f;
+        if (isGrounded && !isDashing && groundedTime > 0.1f && HasSolidGroundAround())
+            SafePosition = rb.position;
 
         if (isDashing)
         {
@@ -263,6 +277,41 @@ public class PlayerMovement : MonoBehaviour
         rb.linearVelocity = new Vector2(newX, Mathf.Max(vy, -maxFallSpeed));
     }
 
+    // ---------------------------------------------------------------- Posisi aman & teleport
+    bool HasSolidGroundAround()
+    {
+        Bounds b = col.bounds;
+        float reach = b.extents.x + safeEdgeMargin;
+        return SolidGroundAt(b.center.x - reach, b.min.y) && SolidGroundAt(b.center.x + reach, b.min.y);
+    }
+
+    bool SolidGroundAt(float x, float feetY)
+    {
+        int n = Physics2D.Raycast(new Vector2(x, feetY + 0.1f), Vector2.down, groundFilter, hitBuffer, 0.4f);
+        for (int i = 0; i < n; i++)
+        {
+            var c = hitBuffer[i].collider;
+            if (c == null || c.transform.IsChildOf(transform)) continue;
+            if (c.GetComponentInParent<Enemy>() != null) continue;     // berdiri di atas musuh bukan tempat aman
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>Pindahkan player (mis. setelah jatuh ke jurang) dan reset kecepatan & efek.</summary>
+    public void TeleportTo(Vector2 position)
+    {
+        isDashing = false;
+        rb.position = position;
+        transform.position = position;
+        rb.linearVelocity = Vector2.zero;
+        peakFallSpeed = 0f;                 // supaya tidak ada efek mendarat besar
+        coyoteCounter = 0f;
+        bufferCounter = 0f;
+        jumpCutRequested = false;
+        controlLockTimer = 0.2f;            // diam sebentar supaya jelas player kembali
+    }
+
     // ---------------------------------------------------------------- Dash
     void StartDash()
     {
@@ -318,6 +367,15 @@ public class PlayerMovement : MonoBehaviour
         jumpCutRequested = false;
     }
 
+    public bool IsDashing => isDashing;
+
+    /// <summary>Kunci input gerak/lompat/dash (mis. selama parry). Player berhenti dengan deselerasi biasa.</summary>
+    public void SetActionLock(bool locked)
+    {
+        actionLocked = locked;
+        if (locked) { moveInput = 0f; jumpHeld = false; dashBuffer = 0f; }
+    }
+
     public void SetControlEnabled(bool enabled)
     {
         controlEnabled = enabled;
@@ -371,7 +429,7 @@ public class PlayerMovement : MonoBehaviour
             pressed |= kb.spaceKey.wasPressedThisFrame;
             held |= kb.spaceKey.isPressed;
             released |= kb.spaceKey.wasReleasedThisFrame;
-            dash |= kb.leftShiftKey.wasPressedThisFrame;
+            dash |= kb.leftShiftKey.wasPressedThisFrame || kb.rightShiftKey.wasPressedThisFrame;
         }
 
         var gp = Gamepad.current;

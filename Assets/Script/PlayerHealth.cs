@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Tilemaps;
 
 /// <summary>
 /// Health player: damage, invincibility frames (berkedip), knockback, mati + respawn.
@@ -20,6 +21,12 @@ public class PlayerHealth : MonoBehaviour
     [SerializeField] private Vector2 knockback = new Vector2(6f, 5f); // x dikali arah menjauhi sumber damage
     [SerializeField] private float knockbackLockTime = 0.25f;         // kontrol player dikunci sebentar
 
+    [Header("Jatuh ke jurang")]
+    [SerializeField] private int fallDamage = 1;
+    [SerializeField] private float fallMargin = 6f;           // di bawah tilemap paling bawah sejauh ini = jatuh
+    [SerializeField] private bool useManualKillY = false;     // centang kalau mau menentukan batas jatuh sendiri
+    [SerializeField] private float manualKillY = -15f;
+
     [Header("Mati")]
     [SerializeField] private float respawnDelay = 1.5f;
     [SerializeField] private bool reloadSceneOnDeath = false; // false = respawn di posisi awal (tidak perlu Build Settings)
@@ -34,16 +41,19 @@ public class PlayerHealth : MonoBehaviour
 
     private Rigidbody2D rb;
     private PlayerMovement movement;
+    private PlayerParry parry;
     private Staff staff;
     private SpriteRenderer[] renderers;
     private Color[] baseColors;
     private Vector3 spawnPoint;
     private float invincibleTimer;
+    private float killY;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
         movement = GetComponent<PlayerMovement>();
+        parry = GetComponent<PlayerParry>();
         staff = GetComponentInChildren<Staff>();
         Current = maxHealth;
         spawnPoint = transform.position;
@@ -57,19 +67,24 @@ public class PlayerHealth : MonoBehaviour
         for (int i = 0; i < renderers.Length; i++) baseColors[i] = renderers[i].color;
 
         HealthChanged?.Invoke(Current, maxHealth);
+        CalculateKillY();
     }
 
     void Update()
     {
         if (invincibleTimer > 0f) invincibleTimer -= Time.deltaTime;
         UpdateBlink();
+
+        if (!IsDead && transform.position.y < killY) FallRespawn();
     }
 
     // ---------------------------------------------------------------- Damage & heal
     /// <summary>Kurangi health. Return true kalau damage benar-benar masuk (tidak sedang kebal/mati).</summary>
-    public bool TakeDamage(int amount, Vector2 sourcePosition)
+    public bool TakeDamage(int amount, Vector2 sourcePosition, Component source = null)
     {
-        if (IsDead || amount <= 0 || invincibleTimer > 0f) return false;
+        if (IsDead || amount <= 0) return false;
+        if (parry != null && parry.TryParry(sourcePosition, source)) return false;   // di-parry
+        if (invincibleTimer > 0f) return false;
 
         Current = Mathf.Max(0, Current - amount);
         invincibleTimer = invincibleTime;
@@ -80,6 +95,40 @@ public class PlayerHealth : MonoBehaviour
 
         if (Current <= 0) Die();
         return true;
+    }
+
+    // ---------------------------------------------------------------- Jatuh ke jurang
+    void CalculateKillY()
+    {
+        if (useManualKillY) { killY = manualKillY; return; }
+
+        float minY = float.PositiveInfinity;
+        foreach (var tm in FindObjectsByType<Tilemap>(FindObjectsSortMode.None))
+        {
+            var b = tm.cellBounds;
+            if (b.size.x == 0 || b.size.y == 0) continue;
+            minY = Mathf.Min(minY, tm.CellToWorld(new Vector3Int(0, b.yMin, 0)).y);
+        }
+        killY = float.IsInfinity(minY) ? spawnPoint.y - 20f : minY - fallMargin;
+    }
+
+    /// <summary>Jatuh ke bawah: kena damage lalu kembali ke posisi aman terakhir (tidak dihalangi kebal sementara).</summary>
+    void FallRespawn()
+    {
+        Current = Mathf.Max(0, Current - fallDamage);
+        HealthChanged?.Invoke(Current, maxHealth);
+
+        if (Current <= 0) { Die(); return; }        // mati: respawn di titik awal seperti biasa
+
+        movement.TeleportTo(movement.SafePosition);
+        invincibleTimer = invincibleTime;           // berkedip & kebal sebentar setelah kembali
+    }
+
+    void OnDrawGizmosSelected()
+    {
+        if (!Application.isPlaying) return;
+        Gizmos.color = Color.red;
+        Gizmos.DrawLine(new Vector3(transform.position.x - 30f, killY, 0f), new Vector3(transform.position.x + 30f, killY, 0f));
     }
 
     public void Heal(int amount)

@@ -61,6 +61,8 @@ public abstract class Enemy : MonoBehaviour, IDamageable
     protected Animator animator;
     protected int Facing { get; private set; } = 1;            // 1 = kanan, -1 = kiri
     protected bool IsStaggered => staggerTimer > 0f;
+    /// <summary>Pingsan (mis. karena di-parry): tidak bergerak dan tidak melukai player.</summary>
+    public bool IsStunned => stunTimer > 0f;
     protected Color OriginalColor { get; private set; } = Color.white;
     protected int SortingLayerId => sr != null ? sr.sortingLayerID : 0;
     protected int SortingOrder => sr != null ? sr.sortingOrder : 0;
@@ -68,6 +70,7 @@ public abstract class Enemy : MonoBehaviour, IDamageable
     private Color baseColor = Color.white;
     private float flashTimer;
     private float staggerTimer;
+    private float stunTimer;
     private float hitAnimTimer;
     private float barTimer;
     private Transform barRoot;
@@ -110,6 +113,7 @@ public abstract class Enemy : MonoBehaviour, IDamageable
     {
         float dt = Time.deltaTime;
         staggerTimer -= dt;
+        stunTimer -= dt;
 
         if (hitAnimTimer > 0f)
         {
@@ -139,12 +143,22 @@ public abstract class Enemy : MonoBehaviour, IDamageable
         if (!IsDead) FixedTick(Time.fixedDeltaTime);
     }
 
+    // ---------------------------------------------------------------- Pingsan (parry)
+    public void Stun(float time, Vector2 knockbackVelocity)
+    {
+        if (IsDead) return;
+        stunTimer = Mathf.Max(stunTimer, time);
+        staggerTimer = Mathf.Max(staggerTimer, time);
+        flashTimer = hitFlashDuration;
+        if (rb.bodyType == RigidbodyType2D.Dynamic) rb.linearVelocity = knockbackVelocity;
+    }
+
     // ---------------------------------------------------------------- Damage ke player
     void OnCollisionStay2D(Collision2D collision)
     {
-        if (IsDead || contactDamage <= 0 || !CanHurtPlayer()) return;
+        if (IsDead || IsStunned || contactDamage <= 0 || !CanHurtPlayer()) return;
         var health = collision.collider.GetComponentInParent<PlayerHealth>();
-        if (health != null) health.TakeDamage(contactDamage, transform.position);
+        if (health != null) health.TakeDamage(contactDamage, transform.position, this);
     }
 
     // ---------------------------------------------------------------- Damage & mati
