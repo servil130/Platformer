@@ -9,7 +9,7 @@ using UnityEngine.InputSystem;
 /// dan player kebal sebentar (tanpa berkedip). Parry meleset: player terkunci sebentar (recovery).
 ///
 /// Tombol: klik kanan mouse, F, atau tombol West gamepad (X / Square).
-/// Animator (opsional): parameter bool IsParrying (menyala selama jendela parry dan recovery).
+/// Animator (opsional): parameter bool Parry atau IsParrying (menyala selama jendela parry dan recovery).
 /// Dipanggil oleh PlayerHealth.TakeDamage -> TryParry().
 /// </summary>
 [RequireComponent(typeof(PlayerMovement), typeof(PlayerHealth))]
@@ -116,6 +116,7 @@ public class PlayerParry : MonoBehaviour
             actionLocked = locked;
             movement.SetActionLock(locked);                    // tidak bisa jalan/lompat/dash selama parry
         }
+        if (animParams.Contains("Parry")) animator.SetBool("Parry", locked);
         if (animParams.Contains("IsParrying")) animator.SetBool("IsParrying", locked);
     }
 

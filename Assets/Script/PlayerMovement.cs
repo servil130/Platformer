@@ -55,7 +55,7 @@ public class PlayerMovement : MonoBehaviour
     [Header("Visual")]
     [SerializeField] private SpriteRenderer sprite;
     [SerializeField] private bool spriteFacesRight = true;     // matikan kalau gambar aslinya menghadap kiri
-    [SerializeField] private Animator animator;               // opsional: IsMoving (bool), Grounded (bool), Speed (float), VelocityY (float)
+    [SerializeField] private Animator animator;               // opsional: IsMoving, Jump, Landing, IsDashing, Grounded (bool); VelocityY, Speed (float)
 
     [Header("Efek debu (dibuat otomatis)")]
     [SerializeField] private bool useDust = true;
@@ -102,6 +102,8 @@ public class PlayerMovement : MonoBehaviour
 
     private float groundedTime;
     private bool actionLocked;            // dipakai PlayerParry (tidak bisa jalan/lompat/dash)
+    private float landingAnimTimer;
+    private const float LandingAnimTime = 0.12f;
     /// <summary>Posisi terakhir yang aman (berdiri mantap di tanah, jauh dari tepi). Dipakai PlayerHealth saat jatuh.</summary>
     public Vector2 SafePosition { get; private set; }
 
@@ -172,11 +174,14 @@ public class PlayerMovement : MonoBehaviour
         UpdateDust();
         UpdateSquash();
 
+        landingAnimTimer -= Time.deltaTime;
         SetAnimFloat("Speed", Mathf.Abs(rb.linearVelocity.x));
         SetAnimFloat("VelocityY", rb.linearVelocity.y);
         SetAnimBool("Grounded", isGrounded);
         SetAnimBool("IsMoving", isGrounded && !isDashing && Mathf.Abs(rb.linearVelocity.x) > 0.1f);
         SetAnimBool("IsDashing", isDashing);
+        SetAnimBool("Jump", !isGrounded);                 // true selama di udara (lompat maupun jatuh)
+        SetAnimBool("Landing", landingAnimTimer > 0f);    // true sebentar saat mendarat
     }
 
     // Animator menganimasikan SpriteRenderer asli; salin sprite-nya ke "Visual" supaya animasi tetap terlihat
@@ -407,6 +412,7 @@ public class PlayerMovement : MonoBehaviour
 
     void OnLanded()
     {
+        landingAnimTimer = LandingAnimTime;
         float t = Mathf.Clamp01(-peakFallSpeed / maxFallSpeed);
         peakFallSpeed = 0f;
         if (t < 0.15f) return; // jatuh pendek: tanpa efek

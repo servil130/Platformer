@@ -296,6 +296,7 @@ GameObject:
   - component: {fileID: 253183317}
   - component: {fileID: 253183318}
   - component: {fileID: 253183319}
+  - component: {fileID: 253183320}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -364,17 +365,17 @@ BoxCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: -0.02418983, y: 0.03123182}
+  m_Offset: {x: 0.042270303, y: -0.24125642}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 0.9375, y: 1.375}
+    oldSize: {x: 1.25, y: 2}
     newSize: {x: 1, y: 1}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 0.67852664, y: 0.9653412}
+  m_Size: {x: 0.8114476, y: 1.5103177}
   m_EdgeRadius: 0
 --- !u!212 &253183315
 SpriteRenderer:
@@ -420,7 +421,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 5
-  m_Sprite: {fileID: -7446026091647042388, guid: 65b2219bfb0671448bcaa8fac0e6fd3b, type: 3}
+  m_Sprite: {fileID: 3483805278199826490, guid: 6161f20701b0a8d4b938a3c0382fa6eb, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -522,7 +523,7 @@ MonoBehaviour:
   knockback: {x: 6, y: 5}
   knockbackLockTime: 0.25
   fallDamage: 1
-  fallMargin: 6
+  fallMargin: 5
   useManualKillY: 0
   manualKillY: -15
   respawnDelay: 1.5
@@ -549,6 +550,32 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &253183320
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 253183312}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b25eeb6f92da40c49bec760c2d68da7f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  activeTime: 0.2
+  whiffRecovery: 0.3
+  cooldown: 0.6
+  inputBuffer: 0.08
+  graceAfterSuccess: 0.4
+  counterDamage: 1
+  enemyStaggerTime: 0.8
+  enemyKnockback: 7
+  hitStopTime: 0.08
+  sparkCount: 14
+  sparkColor: {r: 1, g: 0.95, b: 0.6, a: 1}
+  shieldColor: {r: 0.45, g: 0.85, b: 1, a: 1}
+  useRightMouse: 1
+  useFKey: 1
 --- !u!1 &312437464
 GameObject:
   m_ObjectHideFlags: 0
